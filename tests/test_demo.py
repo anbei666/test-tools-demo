@@ -3,5 +3,5 @@ def add(a, b):
 
 
 def test_add():
-    print('assert add(1, 2) == 3')
+    print('assert add(1, 2) == 3,just add a test pr')
     assert add(1, 2) == 3
