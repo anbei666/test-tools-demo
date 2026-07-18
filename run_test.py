@@ -1,1 +1,1 @@
-print('Run automatic test V2.0 in main')
+print('autotest case main v3.0 test https push')
