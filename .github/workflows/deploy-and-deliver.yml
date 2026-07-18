@@ -1,0 +1,96 @@
+# ==========================================
+# 流水线名称：持续交付流水线（测试验证与制品打包）
+# ==========================================
+name: Continuous Delivery (Test & Package)
+
+# 🌟 触发时机：只有当代码被 push 到 main 分支（例如 PR 合并成功或直接 push）时才会触发
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Job 1: 在干净的 Docker 环境中运行全量自动化测试验证（环境一致性校验）
+  # -------------------------------------------------------------------------
+  docker-test-validation:
+    name: 运行容器化测试验证
+    runs-on: ubuntu-latest  # 使用 GitHub 提供的最新版 Ubuntu 虚拟机作为执行宿主机
+
+    steps:
+      # 1.1 拉取代码：将 main 分支最新的代码下载到虚拟机的工作目录中
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      # 1.2 设置 Docker Buildx：开启 Docker 官方的高级构建引擎（支持多架构构建和强大的缓存功能）
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 1.3 登录到 Docker Hub：使用配置好的 Secrets 安全凭证进行身份认证，打通上传通道
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}  # 你的 Docker Hub 账号名
+          password: ${{ secrets.DOCKERHUB_TOKEN }}     # 你的 Docker Hub Access Token（安全令牌）
+
+      # 1.4 构建并推送镜像：根据项目中的 Dockerfile 自动打包，并将其推送到远端仓库
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .           # 指定构建上下文为当前项目的根目录
+          file: ./Dockerfile   # 指定 Dockerfile 的文本路径
+          push: true           # 设置为 true，表示构建成功后立刻自动 push 到 Docker Hub
+          # 🌟 同时打上两个标签：一个是永远指向最新的 latest，另一个是以当前 git commit 的哈希值为版本号
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:${{ github.sha }}
+            
+      # 1.5 容器内跑测试：拉起刚刚推上去的镜像，在容器独立的沙盒环境下疯狂运行 pytest
+      - name: Run Tests inside container and export report
+        run: |
+          # 在虚拟机本地创建一个专门用来接住报告的临时目录
+          mkdir -p ./gh_reports
+          # 运行容器：
+          # --rm: 跑完测试后自动销毁容器，不残留垃圾数据
+          # -v: 把虚拟机刚创建的 ./gh_reports 目录，挂载到容器内放报告的 /app/reports 路径上
+          docker run --rm -v $(pwd)/gh_reports:/app/reports${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:latest
+
+      # 1.6 收集测试报告：利用 GitHub 官方组件，把映射出来的 html 报告自动打包上传到当前流水线页面
+      - name: Upload Test Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-html-report   # 在 GitHub 网页上显示的压缩包下载名称
+          path: ./gh_reports/        # 要抓取并上传的虚拟机本地路径
+          retention-days: 7          # 该报告文件在 GitHub 服务器上保留 7 天，过期自动清理
+
+  # -------------------------------------------------------------------------
+  # Job 2: 项目制品打包发布（只有当前置的 Docker 测试全部 PASS 时才允许执行）
+  # -------------------------------------------------------------------------
+  package-release:
+    name: 生产项目制品打包
+    runs-on: ubuntu-latest
+    # 🌟 核心控制开关：声明此任务依赖于上一个任务。
+    # 只要上面的 docker-test-validation 里 Pytest 有任何一个用例挂了，这里就会直接被拦截（Skipped），杜绝带病交付！
+    needs: docker-test-validation 
+    
+    steps:
+      # 2.1 拉取代码：同样需要把最新的代码拉到这台打包用的虚拟机里
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      # 2.2 配置原生 Python 环境：准备运行你的本地打包脚本
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # 保持与你自动化项目完全一致的 Python 基准版本
+
+      # 2.3 运行打包：执行你写好的打包逻辑（例如打包成 tar.gz 或 zip 等）
+      - name: Run local packaging script
+        run: python pack_project.py
+
+      # 2.4 收集发布包：将 pack_project.py 生成的压缩包资产，安全上传到 GitHub Release/Artifacts 区域
+      - name: Upload packaged artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-release-package  # 最终交付的发布包下载名称
+          path: "*.tar.gz"               # 模糊匹配当前目录下所有生成的 tar.gz 压缩包
+          retention-days: 7              # 制品包在云端同样保留 7 天
