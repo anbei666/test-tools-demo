@@ -1,0 +1,63 @@
+# ==============================================================================
+# Ruff 配置 (代码规范、格式化、死代码扫描)
+# ==============================================================================
+[tool.ruff]
+# 目标 Python 版本
+target-version = "py310"
+
+# 每一行代码的最大长度（超出会报错/被自动格式化）
+line-length = 88
+
+# 显式指定需要包含或排除的目录
+src = ["."]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "venv",
+    ".venv",
+]
+
+[tool.ruff.lint]
+# 🌟 核心：启用的规则集
+# E/W: Pycodestyle (基础语法规范)
+# F: Pyflakes (捕捉明显的 Bug，如未定义变量)
+# I: Isort (自动给 import 排序)
+# B: Flake8-bugbear (捕捉潜在的逻辑陷阱)
+# S: Flake8-bandit (内置安全扫描，相当于集成了 Bandit 插件)
+select = ["E", "W", "F", "I", "B", "S"]
+
+# 🌟 核心：显式忽略的特定规则
+ignore = [
+    "E501", # 忽略行超长（前面设置了 88，但有时长字符串很难拆行，忽略此项允许弹性超长）
+    "B008", # 允许在函数参数中默认调用对象（FastAPI 中依赖注入 `Depends()` 经常用到，不忽略会报错）
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 针对特定目录或文件做“特赦”
+# 自动化测试目录（tests/）通常包含断言和测试数据，关闭安全扫描（S）和代码复杂度扫描
+"tests/**/*.py" = ["S101", "S105", "S106"] 
+
+# ==============================================================================
+# Mypy 配置 (静态类型检查)
+# ==============================================================================
+[tool.mypy]
+# 目标 Python 版本
+python_version = "3.10"
+
+# 🌟 强类型约束开关（建议新项目直接开启，老项目视情况而定）
+strict = false # 设为 true 会开启地狱模式：所有函数参数和返回值必须强制写类型声明
+
+# 核心安全与防错配置
+warn_return_any = true         # 如果函数声明了返回值类型，但你返回了 Any，会提出警告
+warn_unused_ignores = true     # 如果你写了 # type: ignore 但实际不需要，会警告你删掉
+no_implicit_optional = true    # 禁止隐式的 Optional（如 x: str = None 必须写成 x: Optional[str] = None）
+
+# 🌟 核心：如何对待没有写类型提示的第三方库
+ignore_missing_imports = true  # 极度重要！防止因为 requests、pytest 等第三方库没有内置类型声明而疯狂报错
+
+[[tool.mypy.overrides]]
+# 针对测试目录调低类型检查烈度
+module = "tests.*"
+ignore_errors = true           # 测试用例没必要死磕严格的类型检查，直接跳过报错
