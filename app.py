@@ -42,4 +42,4 @@ if __name__ == '__main__':
     # 🌟 关键点：必须设置 host='0.0.0.0'
     #    这样 Docker 引擎才能把宿主机的请求转交给容器内的服务。
     # 🌟 关键点：port 必须与 Dockerfile 中的 EXPOSE 和 docker run 中的映射端口一致 (8000)。
-    app.run(host='0.0.0.0', port=8000)  # nosec
+    app.run(host='0.0.0.0', port=8000)  # nosec # noqa: S104
