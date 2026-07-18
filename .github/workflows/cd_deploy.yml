@@ -14,9 +14,10 @@ jobs:
     - name: Checkout repository code
       uses: actions/checkout@v4
 
-    # 2. 设置 Docker Buildx（Docker 官方提供的强大构建工具插件）
+    # ✅ 2. 【精准修正】设置 Docker Buildx (使用正式推荐的官方 Action)
+    # 这个 Action 由 'docker' 组织提供，专门用于设置 Buildx，支持高级构建功能（如多架构、缓存等）。
     - name: Set up Docker Buildx
-      uses: actions/setup-docker-actions@v3  # 注：实际生产常使用 docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v3  # 👈 修改这里
 
     # 3. 登录到 Docker Hub
     - name: Log in to Docker Hub
@@ -27,6 +28,7 @@ jobs:
 
     # 4. 构建并推送镜像
     - name: Build and push Docker image
+        # 注意：这里和下面 tags 的缩进我也帮你统一规范了一下
       uses: docker/build-push-action@v5
       with:
         context: .  # 指定 Dockerfile 所在的目录（当前项目根目录）
