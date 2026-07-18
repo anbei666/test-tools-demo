@@ -1,1 +1,1 @@
-python('Run automatic testV1.0')
+print('Run automatic test V2.0 in main')
