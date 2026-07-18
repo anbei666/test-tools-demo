@@ -1,0 +1,54 @@
+name: Python Pytest CI
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.14'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install pytest pytest-html  # 额外安装 pytest-html 插件用来生成漂亮的 HTML 报告
+
+    # 5. 步骤五：执行 pytest 并指定生成 html 报告
+    - name: Run pytest
+      run: |
+        pytest --html=report.html --self-contained-html
+
+    # 6. 步骤六：上传测试报告（核心改动）
+    - name: Upload Test Report
+      uses: actions/upload-artifact@v4
+      if: always() # 🌟 关键：无论测试成功还是失败，都必然执行此步骤
+      with:
+        name: pytest-html-report   # 下载时压缩包的名字
+        path: report.html          # 要上传的文件路径（对应上面 pytest 生成的文件名）
+        retention-days: 14         # 报告在 GitHub 上的保存天数，到期自动删除，节约空间
+
+    # 7. 步骤七：如果你的自动化测试包含截图，可以把截图文件夹也传上去（可选）
+    - name: Upload Error Screenshots
+      uses: actions/upload-artifact@v4
+      if: failure() # 🌟 关键：只有当测试失败（用例挂了）时，才上传截图
+      with:
+        name: error-screenshots
+        path: screenshots/         # 假设你的自动化脚本失败时会把截图存到这个文件夹
