@@ -45,14 +45,17 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:${{ github.sha }}
             
       # 1.5 容器内跑测试：拉起刚刚推上去的镜像，在容器独立的沙盒环境下疯狂运行 pytest
+      # 1.5 容器内跑测试
       - name: Run Tests inside container and export report
+        # 🌟 定义一个专门的局部变量，确保拼接绝对安全
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          # 在虚拟机本地创建一个专门用来接住报告的临时目录
+          # 创建一个云端临时目录用来接住报告
           mkdir -p ./gh_reports
-          # 运行容器：
-          # --rm: 跑完测试后自动销毁容器，不残留垃圾数据
-          # -v: 把虚拟机刚创建的 ./gh_reports 目录，挂载到容器内放报告的 /app/reports 路径上
-          docker run --rm -v $(pwd)/gh_reports:/app/reports${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:latest
+          
+          # 运行容器，直接使用局部变量拼接镜像全称
+          docker run --rm -v $(pwd)/gh_reports:/app/reports ${DOCKER_USER}/my-test-platform:latest
 
       # 1.6 收集测试报告：利用 GitHub 官方组件，把映射出来的 html 报告自动打包上传到当前流水线页面
       - name: Upload Test Report Artifact
