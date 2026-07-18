@@ -1,38 +1,30 @@
 name: Continuous Deployment (Build & Push Docker)
 
-# 🌟 触发时机：只有当 main 分支发生 push 事件（即 PR 合并成功或直接 push）时才触发
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-and-push:
+  build_and_push:
+    name: Continuous Deployment (Build & Push Docker)
     runs-on: ubuntu-latest
-
     steps:
-    # 1. 拉取最新的代码
-    - name: Checkout repository code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # 2. 设置 Docker Buildx（Docker 官方提供的强大构建工具插件）
-    - name: Set up Docker Buildx
-      uses: actions/setup-docker-actions@v3  # 注：实际生产常使用 docker/setup-buildx-action@v3
+      # 🚨 原来的 actions/setup-docker-actions 这一步已经被删除了
 
-    # 3. 登录到 Docker Hub
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # 4. 构建并推送镜像
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .  # 指定 Dockerfile 所在的目录（当前项目根目录）
-        file: ./Dockerfile  # 指定 Dockerfile 的路径
-        push: true  # 确认为 true，构建完后直接推送到远端仓库
-        # 🌟 镜像标签设置：包含 latest 标签，以及使用 GitHub 的 commit 简写作为版本号
-        tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:latest
-          ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:${{ github.sha }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:latest
