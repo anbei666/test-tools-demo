@@ -38,3 +38,20 @@ jobs:
         tags: |
           ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:latest
           ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:${{ github.sha }}
+          
+    # 5. 运行容器内测试，并将报告挂载到 GitHub 虚拟机的本地目录
+    - name: Run Tests inside container and export report
+      run: |
+        # 创建一个云端临时目录用来接住报告
+        mkdir -p ./gh_reports
+        # 运行容器，通过 -v 将容器内的 /app/reports 映射到 GitHub 虚拟机的 ./gh_reports
+        # 注意：这里的 /app/reports 路径需与你测试平台实际生成报告的绝对路径一致
+        docker run --rm -v $(pwd)/gh_reports:/app/reports ${{ secrets.DOCKERHUB_USERNAME }}/my-test-platform:latest
+
+    # 6. 【新增】将报告作为流水线产物上传，自动保存（供浏览器下载）
+    - name: Upload Test Report Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest-html-report  # 下载时的压缩包名称
+        path: ./gh_reports/       # 需要抓取并保存的云端目录
+        retention-days: 7         # 报告在 GitHub 上保留的天数（过期自动销毁）

@@ -17,7 +17,7 @@ def home():
     return """
     <html>
         <head>
-            <title>自动化测试平台 - 首页</title>
+            <title>自动化测试平台111 - 首页</title>
             <style>
                 body { font-family: Arial, sans-serif; text-align: center; margin-top: 100px; background-color: #f4f4f9; }
                 h1 { color: #333; }
