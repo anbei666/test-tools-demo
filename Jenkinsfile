@@ -1,20 +1,21 @@
 pipeline {
     agent any
 
-    // 💡 正确：triggers 直接作为顶层指令，与 agent、stages 并列
-    triggers {
-        pollSCM('')
-    }
-
-    // 💡 options 用于放置其他流水线级别的配置
+    // 1. 设置超时，防止死循环占用服务器资源
     options {
         timeout(time: 1, unit: 'HOURS')
+        disableConcurrentBuilds()
+    }
+
+    // 2. 触发器：确保代码推送时触发（配合网页端 Webhook 使用）
+    triggers {
+        pollSCM('')
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                // 这里的 checkout scm 会自动使用任务配置中的 Git 仓库
+                // 使用任务配置中的 Git 仓库
                 checkout scm
             }
         }
@@ -29,7 +30,7 @@ pipeline {
         }
 
         stage('Static Lint Checks') {
-            when { expression { env.CHANGE_ID != null } }
+            // 💡 移除所有 when 条件，确保 GitHub 每次都能收到 Lint 结果
             parallel {
                 stage('Ruff Check') { steps { sh 'python3 -m ruff check .' } }
                 stage('Bandit Scan') { steps { sh 'python3 -m bandit -r . -x ./tests' } }
@@ -38,7 +39,7 @@ pipeline {
         }
 
         stage('Run Automated Tests') {
-            when { expression { env.CHANGE_ID != null } }
+            // 💡 移除所有 when 条件，确保 GitHub 每次都能收到测试结果
             steps {
                 sh 'python3 -m pytest --html=report.html --self-contained-html || true'
             }
@@ -56,5 +57,4 @@ pipeline {
             }
         }
     }
-    // 💡 删除了多余的 post 块，状态上报让插件自动完成即可
 }
