@@ -57,4 +57,12 @@ pipeline {
             }
         }
     }
+    post {
+    success {
+        githubNotify(status: 'SUCCESS', description: '所有测试已通过', context: 'continuous-integration/jenkins/pr-head')
+    }
+    failure {
+        githubNotify(status: 'FAILURE', description: '测试未通过', context: 'continuous-integration/jenkins/pr-head')
+    }
+}
 }
