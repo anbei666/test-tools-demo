@@ -10,10 +10,21 @@ pipeline {
 
         stage('Install Tools & Dependencies') {
             steps {
+                // 💡 核心修复：在 Jenkins 容器内部自动安装 Python3 和 pip
                 sh '''
-                    python3 -m pip install --upgrade pip --break-system-packages
-                    python3 -m pip install ruff bandit mypy pytest pytest-html --break-system-packages
-                    if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt --break-system-packages; fi
+                    echo "=== 开始安装系统 Python ==="
+                    # 如果不是 root 用户，尝试更新并安装环境
+                    if command -v apt-get >/dev/null; then
+                        sudo apt-get update || apt-get update
+                        sudo apt-get install -y python3 python3-pip python3-venv || apt-get install -y python3 python3-pip
+                    fi
+                    
+                    echo "=== 检查 Python 版本 ==="
+                    python3 --version || python --version
+                    
+                    echo "=== 安装 Python 测试依赖包 ==="
+                    python3 -m pip install --upgrade pip --break-system-packages || pip install --upgrade pip
+                    python3 -m pip install ruff bandit mypy pytest pytest-html --break-system-packages || pip install ruff bandit mypy pytest pytest-html
                 '''
             }
         }
@@ -22,17 +33,17 @@ pipeline {
             parallel {
                 stage('Ruff Check') {
                     steps {
-                        sh 'python3 -m ruff check .'
+                        sh 'python3 -m ruff check . || ruff check .'
                     }
                 }
                 stage('Bandit Scan') {
                     steps {
-                        sh 'python3 -m bandit -r . -x ./tests'
+                        sh 'python3 -m bandit -r . -x ./tests || bandit -r . -x ./tests'
                     }
                 }
                 stage('Mypy Type Check') {
                     steps {
-                        sh 'python3 -m mypy . --ignore-missing-imports'
+                        sh 'python3 -m mypy . --ignore-missing-imports || mypy . --ignore-missing-imports'
                     }
                 }
             }
@@ -40,9 +51,8 @@ pipeline {
 
         stage('Run Automated Tests') {
             steps {
-                sh 'python3 -m pytest --html=report.html --self-contained-html || true'
+                sh 'python3 -m pytest --html=report.html --self-contained-html || pytest --html=report.html --self-contained-html || true'
             }
-            // 💡 关键改动：把发布报告的逻辑挪到这个拥有明确工作空间的 stage 后置钩子里
             post {
                 always {
                     publishHTML(target: [
