@@ -7,10 +7,10 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    // 2. 触发器：确保代码推送时触发（配合网页端 Webhook 使用）
-    triggers {
-        pollSCM('')
-    }
+    // // 2. 触发器：确保代码推送时触发（配合网页端 Webhook 使用）
+    // triggers {
+    //     pollSCM('')
+    // }
 
     stages {
         stage('Checkout Code') {
@@ -59,10 +59,15 @@ pipeline {
     }
     post {
         success {
-            step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建成功', state: 'SUCCESS']]]])
+            node('master') {
+                step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建成功', state: 'SUCCESS']]]])
+            }
         }
         failure {
-            step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建失败', state: 'FAILURE']]]])
+            node('master') {
+                step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建失败', state: 'FAILURE']]]])
+            }
         }
     }
-}
+}   
+    
