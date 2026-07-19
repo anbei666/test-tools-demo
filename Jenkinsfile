@@ -1,5 +1,4 @@
 pipeline {
-    // 1. 使用 any 环境，不再调用 Docker 镜像，直接在 Jenkins 容器内就地运行
     agent any
 
     stages {
@@ -11,7 +10,6 @@ pipeline {
 
         stage('Install Tools & Dependencies') {
             steps {
-                // 利用容器内置的 python3
                 sh '''
                     python3 -m pip install --upgrade pip --break-system-packages
                     python3 -m pip install ruff bandit mypy pytest pytest-html --break-system-packages
@@ -42,23 +40,21 @@ pipeline {
 
         stage('Run Automated Tests') {
             steps {
-                // 执行 Pytest
                 sh 'python3 -m pytest --html=report.html --self-contained-html || true'
             }
-        }
-    }
-
-    post {
-        always {
-            // 当第一步的插件装好后，这行代码就能完美解析并挂载你的报告了
-            publishHTML(target: [
-                allowMissing: false,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: '.',
-                reportFiles: 'report.html',
-                reportName: 'Pytest自动化测试报告'
-            ])
+            // 💡 关键改动：把发布报告的逻辑挪到这个拥有明确工作空间的 stage 后置钩子里
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'report.html',
+                        reportName: 'Pytest自动化测试报告'
+                    ])
+                }
+            }
         }
     }
 }
