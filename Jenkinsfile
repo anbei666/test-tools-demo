@@ -59,10 +59,14 @@ pipeline {
     }
     post {
         success {
-            step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建成功', state: 'SUCCESS']]]])
+            node {
+                step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建成功', state: 'SUCCESS']]]])
+            }
         }
         failure {
-            step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建失败', state: 'FAILURE']]]])
+            node {
+                step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建失败', state: 'FAILURE']]]])
+            }
         }
     }
 }
