@@ -58,11 +58,11 @@ pipeline {
         }
     }
     post {
-    success {
-        githubNotify(status: 'SUCCESS', description: '所有测试已通过', context: 'continuous-integration/jenkins/pr-head')
+        success {
+            step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建成功', state: 'SUCCESS']]]])
+        }
+        failure {
+            step([$class: 'GitHubCommitStatusSetter', statusResultSource: [$class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: '构建失败', state: 'FAILURE']]]])
+        }
     }
-    failure {
-        githubNotify(status: 'FAILURE', description: '测试未通过', context: 'continuous-integration/jenkins/pr-head')
-    }
-}
 }
