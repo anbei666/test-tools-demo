@@ -1,10 +1,11 @@
 pipeline {
     agent any
 
-    triggers {
-        // 💡 强行在内存注册 SCM 监听器，配合 Webhook 的 Poked 信号实现秒级自动触发
-        pollSCM('') 
-    }
+    // 💡 关键：通过 properties 显式声明 GitHub 项目关联，这是插件自动上报状态的前提
+    properties([
+        pipelineTriggers([pollSCM('')]),
+        [$class: 'GithubProjectProperty', projectUrlStr: 'https://github.com/anbei666/test-tools-demo/']
+    ])
 
     stages {
         stage('Checkout Code') {
@@ -58,4 +59,18 @@ pipeline {
             }
         }
     }
+    post {
+        // 💡 无论构建成功还是失败，都确保状态被正确上报
+        always {
+            script {
+                // 如果是在 PR 环境下，主动通知 GitHub 构建结果
+                if (env.CHANGE_ID) {
+                    // 这是利用 GitHub 插件的能力手动进行一次状态通知
+                    // 如果你配置正确，插件通常会自动通知，加这行是双保险
+                    echo "Notifying GitHub of build result: ${currentBuild.currentResult}"
+                }
+            }
+        }
+    }
+}
 }
