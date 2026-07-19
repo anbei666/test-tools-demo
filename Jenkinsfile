@@ -1,10 +1,14 @@
 pipeline {
     agent any
 
-    // 💡 替换 properties：使用 options + triggers
+    // 💡 正确：triggers 直接作为顶层指令，与 agent、stages 并列
+    triggers {
+        pollSCM('')
+    }
+
+    // 💡 options 用于放置其他流水线级别的配置
     options {
-        // 等同于之前的 pollSCM('') 触发器
-        triggers(pollSCM(''))
+        timeout(time: 1, unit: 'HOURS')
     }
 
     stages {
